@@ -1,7 +1,7 @@
 import lgpio
 import time
 
-GPIO_PIN = 17
+GPIO_PIN = 18
 
 h = lgpio.gpiochip_open(0)
 
