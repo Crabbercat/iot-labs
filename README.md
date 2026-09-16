@@ -68,10 +68,10 @@ Chạy server trên Raspberry Pi:
 python labs/03_Web/server.py
 ```
 
-Mở trình duyệt bằng địa chỉ IPv6 của Raspberry Pi:
+Mở trình duyệt bằng địa chỉ IPv6 hoặc IPv4 của Raspberry Pi:
 
 ```text
-http://[IPv6-cua-Raspberry-Pi]:8080
+http://raspberrypi.local:8080
 ```
 
 Ví dụ với địa chỉ link-local và interface mạng:
