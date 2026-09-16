@@ -23,10 +23,16 @@ labs/
 │   ├── sg90.py
 │   └── step.py
 └── 03_Web/
-		├── interface.py
-		├── led_controller.py
-		├── weather_service.py
-		└── server.py
+		├── server.py
+		├── led_app/
+		│       ├── __init__.py
+		│       ├── interface.py
+		│       └── led_service.py
+		└── weather_app/
+				├── __init__.py
+				├── interface.py
+				├── led_controller.py
+				└── weather_service.py
 ```
 
 ## Các bài thực hành
@@ -57,14 +63,14 @@ python labs/02_Motor/step.py
 
 Lab web được tách thành các phần điều khiển, thời tiết, giao diện và server:
 
-- [`led_controller.py`](labs/03_Web/led_controller.py): lớp điều khiển LED
+- [`weather_app/led_controller.py`](labs/03_Web/weather_app/led_controller.py): lớp điều khiển LED
 	qua `lgpio`, dùng GPIO 14, 15 và 18 cho LED 1, 2 và 3.
-- [`weather_service.py`](labs/03_Web/weather_service.py): lấy dữ liệu từ
+- [`weather_app/weather_service.py`](labs/03_Web/weather_app/weather_service.py): lấy dữ liệu từ
 	Open-Meteo, phân loại `NANG`, `CO MAY`, `MUA` hoặc `KHONG XAC DINH`, rồi
 	điều khiển LED tương ứng.
-- [`interface.py`](labs/03_Web/interface.py): dashboard HTML responsive và
+- [`weather_app/interface.py`](labs/03_Web/weather_app/interface.py): dashboard HTML responsive và
 	JavaScript gọi API bằng `fetch()`.
-- [`server.py`](labs/03_Web/server.py): HTTP server IPv4 trên `0.0.0.0:8080`,
+- [`server.py`](labs/03_Web/server.py): entry point HTTP server IPv4 trên `0.0.0.0:8080`,
 	cung cấp dashboard và API cho các thiết bị trong LAN.
 
 Chạy server trên Raspberry Pi:
@@ -73,11 +79,19 @@ Chạy server trên Raspberry Pi:
 python labs/03_Web/server.py
 ```
 
+Giao diện Weather App:
+
+```text
+http://192.168.1.114:8080/weather
+```
+
 Mở trình duyệt bằng địa chỉ IPv4 của Raspberry Pi:
 
 ```text
 http://192.168.1.114:8080
 ```
+
+Địa chỉ gốc `/` sẽ tự chuyển hướng sang `/weather`.
 
 Hoặc dùng mDNS nếu Raspberry Pi đã được cấu hình:
 
@@ -97,6 +111,28 @@ POST /api/led/2/off       Tắt LED 2
 POST /api/led/3/on        Bật LED 3 (GPIO 18)
 POST /api/led/3/off       Tắt LED 3
 POST /api/led/all-off     Tắt cả ba LED
+POST /api/weather         Nhập thành phố và lấy thời tiết mới
+```
+
+### LED Control: service bật/tắt đơn giản
+
+Service độc lập nằm trong [`led_app`](labs/03_Web/led_app) và không dùng
+logic Weather App. Giao diện chỉ điều khiển một LED riêng trên GPIO 24.
+Server chính vẫn khởi động service này cùng các service khác.
+
+Mở giao diện:
+
+```text
+http://192.168.1.114:8080/led
+```
+
+API của service:
+
+```text
+GET  /api/simple-led/status  Xem trạng thái LED GPIO 24
+POST /api/simple-led/on      Bật LED
+POST /api/simple-led/off     Tắt LED
+POST /api/simple-led/toggle  Đổi trạng thái LED
 ```
 
 Ví dụ kiểm tra từ máy khác trong LAN:

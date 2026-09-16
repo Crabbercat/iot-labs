@@ -1,6 +1,6 @@
 import json
 from datetime import datetime, timezone
-from urllib.parse import quote, urlencode
+from urllib.parse import urlencode
 from urllib.request import urlopen
 
 
@@ -9,9 +9,9 @@ class WeatherServiceError(Exception):
 
 
 class WeatherService:
-    def __init__(self, led_controller, location="Da Nang"):
+    def __init__(self, led_controller, location=None):
         self.led_controller = led_controller
-        self.location = location
+        self.location = location.strip() if location else ""
         self._weather = None
 
     @property
@@ -19,7 +19,7 @@ class WeatherService:
         return self._weather
 
     def refresh(self, location=None):
-        if location:
+        if location is not None:
             self.location = location.strip()
         if not self.location:
             raise WeatherServiceError("Location is required")

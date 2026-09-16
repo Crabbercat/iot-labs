@@ -57,11 +57,12 @@ class LedController:
         lgpio.gpio_write(self._handle, pin, int(is_on))
         self._states[pin] = is_on
 
-    def toggle(self):
-        if self.is_on:
-            self.turn_off()
+    def toggle(self, pin=None):
+        pin = self.pin if pin is None else pin
+        if self._states[pin]:
+            self.set_off(pin)
         else:
-            self.turn_on()
+            self.set_on(pin)
 
     def close(self):
         if self._handle is not None:
