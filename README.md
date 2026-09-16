@@ -24,6 +24,7 @@ labs/
 │   └── step.py
 └── 03_Web/
 		├── server.py
+		├── server_ipv6.py
 		├── led_app/
 		│       ├── __init__.py
 		│       ├── interface.py
@@ -78,6 +79,21 @@ Chạy server trên Raspberry Pi:
 ```bash
 python labs/03_Web/server.py
 ```
+
+Để chạy phiên bản IPv6, dừng server trên trước rồi chạy:
+
+```bash
+python labs/03_Web/server_ipv6.py
+```
+
+Truy cập bằng địa chỉ IPv6:
+
+```text
+http://[IPv6-cua-Raspberry-Pi]:8080/weather
+http://[IPv6-cua-Raspberry-Pi]:8080/led
+```
+
+Hai server dùng chung cổng `8080`, nên chỉ chạy một phiên bản tại một thời điểm.
 
 Giao diện Weather App:
 
