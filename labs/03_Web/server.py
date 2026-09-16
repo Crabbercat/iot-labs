@@ -1,44 +1,65 @@
-from http.server import BaseHTTPRequestHandler, HTTPServer
-import socket
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
 
 from interface import json_response, render_page
 from led_controller import LedController
+from weather_service import WeatherService, WeatherServiceError
 
 
-class IPv6HTTPServer(HTTPServer):
-    address_family = socket.AF_INET6
-
-    def server_bind(self):
-        try:
-            self.socket.setsockopt(socket.IPPROTO_IPV6, socket.IPV6_V6ONLY, 0)
-        except OSError:
-            # Some systems force IPv6-only sockets; IPv6 still works there.
-            pass
-        super().server_bind()
+LED_PINS = (14, 15, 18)
 
 
-class LedRequestHandler(BaseHTTPRequestHandler):
+class IoTRequestHandler(BaseHTTPRequestHandler):
     led = None
+    weather = None
 
     def do_GET(self):
-        print(f"GET {self.path}")
         path = urlparse(self.path).path
-        if path == "/":
-            self._send(200, render_page(self.led.is_on), "text/html; charset=utf-8")
-        elif path == "/api/led":
-            self._send(200, json_response({"on": self.led.is_on}), "application/json")
-        else:
-            self._send(404, b"Not found", "text/plain; charset=utf-8")
+        try:
+            if path == "/":
+                self._send(200, render_page(self._led_response()["leds"], self.weather.weather), "text/html; charset=utf-8")
+            elif path == "/api/weather":
+                self._send(200, json_response(self.weather.refresh()), "application/json")
+            elif path == "/api/led/status":
+                self._send(200, json_response(self._led_response()), "application/json")
+            elif path == "/api/led":
+                self._send(200, json_response({"on": self.led.is_on}), "application/json")
+            else:
+                self._send_error(404, "Not found")
+        except WeatherServiceError as error:
+            self._send_error(503, str(error))
+        except Exception as error:
+            self._send_error(500, str(error))
 
     def do_POST(self):
-        print(f"POST {self.path}")
-        if urlparse(self.path).path != "/api/led/toggle":
-            self._send(404, b"Not found", "text/plain; charset=utf-8")
-            return
+        path = urlparse(self.path).path
+        try:
+            if path == "/api/led/all-off":
+                self.led.set_all_off()
+            elif path == "/api/led/toggle":
+                self.led.toggle()
+            else:
+                parts = path.strip("/").split("/")
+                if len(parts) != 4 or parts[:2] != ["api", "led"] or parts[2] not in {"1", "2", "3"}:
+                    self._send_error(404, "Not found")
+                    return
+                pin = LED_PINS[int(parts[2]) - 1]
+                if parts[3] == "on":
+                    self.led.set_on(pin)
+                elif parts[3] == "off":
+                    self.led.set_off(pin)
+                else:
+                    self._send_error(404, "Not found")
+                    return
+            self._send(200, json_response(self._led_response()), "application/json")
+        except Exception as error:
+            self._send_error(500, str(error))
 
-        self.led.toggle()
-        self._send(200, json_response({"on": self.led.is_on}), "application/json")
+    def _led_response(self):
+        return {"leds": {str(index): self.led.states[pin] for index, pin in enumerate(LED_PINS, 1)}}
+
+    def _send_error(self, status, message):
+        self._send(status, json_response({"error": message}), "application/json")
 
     def _send(self, status, body, content_type):
         self.send_response(status)
@@ -49,10 +70,12 @@ class LedRequestHandler(BaseHTTPRequestHandler):
 
 
 def main():
-    led = LedController()
-    LedRequestHandler.led = led
-    server = IPv6HTTPServer(("::", 8080), LedRequestHandler)
-    print("Server running on http://[::]:8080")
+    led = LedController(pins=LED_PINS)
+    weather = WeatherService(led)
+    IoTRequestHandler.led = led
+    IoTRequestHandler.weather = weather
+    server = ThreadingHTTPServer(("0.0.0.0", 8080), IoTRequestHandler)
+    print("IoT Web Service running on http://0.0.0.0:8080")
     try:
         server.serve_forever()
     except KeyboardInterrupt:

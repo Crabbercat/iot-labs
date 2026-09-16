@@ -25,6 +25,7 @@ labs/
 └── 03_Web/
 		├── interface.py
 		├── led_controller.py
+		├── weather_service.py
 		└── server.py
 ```
 
@@ -54,13 +55,17 @@ python labs/02_Motor/step.py
 
 ### 03_Web: điều khiển LED qua trình duyệt
 
-Lab web được tách thành ba phần:
+Lab web được tách thành các phần điều khiển, thời tiết, giao diện và server:
 
 - [`led_controller.py`](labs/03_Web/led_controller.py): lớp điều khiển LED
-	qua `lgpio`, mặc định dùng GPIO 18.
-- [`interface.py`](labs/03_Web/interface.py): giao diện HTML và phản hồi JSON.
-- [`server.py`](labs/03_Web/server.py): HTTP server IPv6, cung cấp giao diện
-	và API bật/tắt LED.
+	qua `lgpio`, dùng GPIO 14, 15 và 18 cho LED 1, 2 và 3.
+- [`weather_service.py`](labs/03_Web/weather_service.py): lấy dữ liệu từ
+	Open-Meteo, phân loại `NANG`, `CO MAY`, `MUA` hoặc `KHONG XAC DINH`, rồi
+	điều khiển LED tương ứng.
+- [`interface.py`](labs/03_Web/interface.py): dashboard HTML responsive và
+	JavaScript gọi API bằng `fetch()`.
+- [`server.py`](labs/03_Web/server.py): HTTP server IPv4 trên `0.0.0.0:8080`,
+	cung cấp dashboard và API cho các thiết bị trong LAN.
 
 Chạy server trên Raspberry Pi:
 
@@ -68,23 +73,38 @@ Chạy server trên Raspberry Pi:
 python labs/03_Web/server.py
 ```
 
-Mở trình duyệt bằng địa chỉ IPv6 hoặc IPv4 của Raspberry Pi:
+Mở trình duyệt bằng địa chỉ IPv4 của Raspberry Pi:
+
+```text
+http://192.168.1.114:8080
+```
+
+Hoặc dùng mDNS nếu Raspberry Pi đã được cấu hình:
 
 ```text
 http://raspberrypi.local:8080
 ```
 
-Ví dụ với địa chỉ link-local và interface mạng:
-
-```text
-http://[fe80::1234:5678:abcd:ef01%25wlan0]:8080
-```
-
 API hiện có:
 
 ```text
-GET  /api/led          Xem trạng thái LED
-POST /api/led/toggle   Đổi trạng thái LED
+GET  /api/weather          Lấy thời tiết hiện tại và cập nhật LED tự động
+GET  /api/led/status       Xem trạng thái LED 1, 2 và 3
+POST /api/led/1/on        Bật LED 1 (GPIO 14)
+POST /api/led/1/off       Tắt LED 1
+POST /api/led/2/on        Bật LED 2 (GPIO 15)
+POST /api/led/2/off       Tắt LED 2
+POST /api/led/3/on        Bật LED 3 (GPIO 18)
+POST /api/led/3/off       Tắt LED 3
+POST /api/led/all-off     Tắt cả ba LED
+```
+
+Ví dụ kiểm tra từ máy khác trong LAN:
+
+```bash
+curl http://192.168.1.114:8080/
+curl http://192.168.1.114:8080/api/weather
+curl -X POST http://192.168.1.114:8080/api/led/1/on
 ```
 
 ## Cài đặt
@@ -95,6 +115,9 @@ Trên Raspberry Pi, cài các thư viện cần thiết cho từng bài:
 sudo apt update
 sudo apt install python3-lgpio python3-rpi.gpio python3-gpiozero
 ```
+
+Weather Service dùng `urllib` của Python nên không cần cài thêm thư viện HTTP.
+Raspberry Pi cần có kết nối Internet để gọi Open-Meteo.
 
 Nên chạy chương trình từ thư mục gốc của repo. Một số bài dùng chung GPIO,
 vì vậy chỉ chạy một chương trình điều khiển phần cứng tại một thời điểm.
